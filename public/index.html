@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hospital Management System</title>
+<style>
+  :root {
+    --bg:#f4f7f9; --card:#fff; --ink:#14232e; --muted:#5b6b78; --line:#dde5ea;
+    --brand:#0b7a75; --brand-d:#075e5a; --danger:#c0392b; --radius:10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1a20; --card:#17252d; --ink:#e8f0f4; --muted:#9bb0bc; --line:#2a3b45; --brand:#2bb3ac; --brand-d:#1f8d87; --danger:#ff7a6b; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--brand); color:#fff; padding:18px 16px; }
+  header h1 { margin:0; font-size:1.25rem; }
+  header p { margin:2px 0 0; opacity:.85; font-size:.85rem; }
+  main { max-width:1100px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
+  h2 { margin:0 0 12px; font-size:1rem; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { border:1px solid var(--line); border-radius:var(--radius); padding:12px; background:var(--card); }
+  .stat b { display:block; font-size:1.4rem; }
+  .stat span { color:var(--muted); font-size:.8rem; }
+  form { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+  label { display:grid; gap:4px; font-size:.8rem; color:var(--muted); }
+  input, select { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+  input:focus, select:focus, button:focus-visible { outline:2px solid var(--brand); outline-offset:1px; }
+  .actions { display:flex; gap:8px; align-items:end; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
+  button:hover { background:var(--brand-d); }
+  button.ghost { background:transparent; color:var(--brand); }
+  button.danger { background:transparent; color:var(--danger); border-color:var(--danger); }
+  button.sm { padding:4px 10px; font-size:.8rem; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .toolbar input { flex:1 1 220px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.88rem; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
+  td.num, th.num { text-align:right; }
+  .pill { padding:2px 8px; border-radius:99px; font-size:.75rem; border:1px solid var(--line); }
+  .Admitted { color:#b9770e; } .Discharged { color:#1e8449; } .Outpatient { color:#2471a3; }
+  .msg { min-height:1.2em; font-size:.85rem; margin-top:8px; }
+  .msg.err { color:var(--danger); } .msg.ok { color:var(--brand); }
+  .empty { padding:16px; text-align:center; color:var(--muted); }
+  .bars { display:grid; gap:6px; }
+  .bar { display:grid; grid-template-columns:150px 1fr 28px; gap:8px; align-items:center; font-size:.85rem; }
+  .bar i { display:block; height:10px; border-radius:6px; background:var(--brand); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hospital Management System</h1>
+  <p>DBMS Lab &middot; Patient records with MySQL</p>
+</header>
+
+<main>
+  <section class="card" aria-label="Summary">
+    <h2>Summary</h2>
+    <div class="stats" id="stats"></div>
+    <h2 style="margin-top:16px">Patients per doctor</h2>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="formTitle">Add patient</h2>
+    <form id="form">
+      <input type="hidden" id="patient_id">
+      <label>Name <input id="name" required maxlength="80"></label>
+      <label>Age <input id="age" type="number" min="0" max="120" required></label>
+      <label>Gender
+        <select id="gender"><option>Male</option><option>Female</option><option>Other</option></select>
+      </label>
+      <label>Diagnosis <input id="diagnosis" required maxlength="120"></label>
+      <label>Admission date <input id="admission_date" type="date" required></label>
+      <label>Status
+        <select id="status"><option>Admitted</option><option>Discharged</option><option>Outpatient</option></select>
+      </label>
+      <label>Bill amount <input id="bill_amount" type="number" min="0" step="0.01" value="0" required></label>
+      <label>Doctor <select id="doctor_id" required></select></label>
+      <div class="actions">
+        <button type="submit" id="saveBtn">Save patient</button>
+        <button type="button" class="ghost" id="cancelBtn" hidden>Cancel</button>
+      </div>
+    </form>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+
+  <section class="card">
+    <h2>Patient records</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search by name, ID or diagnosis" aria-label="Search">
+      <select id="filterStatus" aria-label="Filter by status">
+        <option value="">All statuses</option><option>Admitted</option><option>Discharged</option><option>Outpatient</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Diagnosis</th><th>Admitted</th>
+          <th>Status</th><th>Doctor</th><th class="num">Bill</th><th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const money = (n) => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let patients = [];
+
+async function api(url, opts) {
+  const res = await fetch(url, opts && { ...opts, headers: { 'Content-Type': 'application/json' } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function say(text, kind) { const m = $('msg'); m.textContent = text; m.className = 'msg ' + (kind || ''); }
+
+function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+
+async function loadSummary() {
+  const s = await api('/api/summary');
+  const items = [
+    ['Total patients', s.total_patients], ['Currently admitted', s.admitted],
+    ['Average bill', money(s.avg_bill)], ['Highest bill', money(s.max_bill)],
+    ['Lowest bill', money(s.min_bill)], ['Total billing', money(s.total_billing)],
+  ];
+  $('stats').replaceChildren(...items.map(([label, val]) => {
+    const d = el('div', undefined, 'stat'); d.append(el('b', val), el('span', label)); return d;
+  }));
+  const max = Math.max(1, ...s.perDoctor.map((d) => d.patients));
+  $('bars').replaceChildren(...s.perDoctor.map((d) => {
+    const row = el('div', undefined, 'bar');
+    const track = el('div'); const bar = el('i'); bar.style.width = (d.patients / max * 100) + '%'; track.append(bar);
+    row.append(el('span', d.doctor), track, el('span', d.patients));
+    return row;
+  }));
+}
+
+async function loadDoctors() {
+  const docs = await api('/api/doctors');
+  $('doctor_id').replaceChildren(...docs.map((d) => {
+    const o = el('option', `${d.name} (${d.department})`); o.value = d.doctor_id; return o;
+  }));
+}
+
+async function loadPatients() {
+  const p = new URLSearchParams({ q: $('search').value.trim(), status: $('filterStatus').value });
+  patients = await api('/api/patients?' + p);
+  const tbody = $('rows');
+  if (!patients.length) {
+    const tr = el('tr'); const td = el('td', 'No matching records.', 'empty'); td.colSpan = 10; tr.append(td);
+    return tbody.replaceChildren(tr);
+  }
+  tbody.replaceChildren(...patients.map((r) => {
+    const tr = el('tr');
+    const pill = el('td'); pill.append(el('span', r.status, 'pill ' + r.status));
+    const act = el('td');
+    const edit = el('button', 'Edit', 'ghost sm'); edit.onclick = () => startEdit(r);
+    const del = el('button', 'Delete', 'danger sm'); del.onclick = () => remove(r);
+    act.append(edit, ' ', del);
+    tr.append(el('td', r.patient_id), el('td', r.name), el('td', r.age), el('td', r.gender), el('td', r.diagnosis),
+      el('td', r.admission_date), pill, el('td', r.doctor_name), el('td', money(r.bill_amount), 'num'), act);
+    return tr;
+  }));
+}
+
+const fields = ['name', 'age', 'gender', 'diagnosis', 'admission_date', 'status', 'bill_amount', 'doctor_id'];
+
+function resetForm() {
+  $('form').reset(); $('patient_id').value = '';
+  $('admission_date').value = new Date().toISOString().slice(0, 10);
+  $('formTitle').textContent = 'Add patient'; $('saveBtn').textContent = 'Save patient'; $('cancelBtn').hidden = true;
+}
+
+function startEdit(r) {
+  fields.forEach((f) => { $(f).value = r[f]; });
+  $('patient_id').value = r.patient_id;
+  $('formTitle').textContent = 'Edit patient #' + r.patient_id;
+  $('saveBtn').textContent = 'Update patient'; $('cancelBtn').hidden = false;
+  say(''); $('form').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function remove(r) {
+  if (!confirm(`Delete patient "${r.name}" (ID ${r.patient_id})? This cannot be undone.`)) return;
+  try { await api('/api/patients/' + r.patient_id, { method: 'DELETE' }); say('Patient deleted.', 'ok'); refresh(); }
+  catch (e) { say(e.message, 'err'); }
+}
+
+$('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const body = Object.fromEntries(fields.map((f) => [f, $(f).value]));
+  const id = $('patient_id').value;
+  try {
+    await api(id ? '/api/patients/' + id : '/api/patients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) });
+    say(id ? 'Patient updated.' : 'Patient added.', 'ok'); resetForm(); refresh();
+  } catch (e) { say(e.message, 'err'); }
+});
+
+$('cancelBtn').onclick = () => { resetForm(); say(''); };
+let t; $('search').addEventListener('input', () => { clearTimeout(t); t = setTimeout(loadPatients, 250); });
+$('filterStatus').addEventListener('change', loadPatients);
+
+function refresh() { return Promise.all([loadPatients(), loadSummary()]); }
+
+(async () => {
+  resetForm();
+  try { await loadDoctors(); await refresh(); } catch (e) { say('Cannot reach the database: ' + e.message, 'err'); }
+})();
+</script>
+</body>
+</html>

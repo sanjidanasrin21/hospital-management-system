@@ -1,0 +1,16 @@
+{
+  "name": "hospital-management-system",
+  "version": "1.0.0",
+  "description": "Single-page Hospital Management System (Node/Express + MySQL) for the DBMS Lab",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "db:init": "mysql -u root < database/schema.sql"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.11.0"
+  }
+}
