@@ -11,7 +11,10 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'hospital_db',
   waitForConnections: true,
   connectionLimit: process.env.VERCEL ? 2 : 5,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+  // Hosted MySQL (Aiven) requires TLS; DB_SSL_CA holds the provider's CA certificate (PEM).
+  ssl: process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined }
+    : undefined,
 });
 
 const app = express();
