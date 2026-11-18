@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2/promise');
 const path = require('path');
+const fs = require('fs');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
@@ -11,9 +12,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'hospital_db',
   waitForConnections: true,
   connectionLimit: process.env.VERCEL ? 2 : 5,
-  // Hosted MySQL (Aiven) requires TLS; DB_SSL_CA holds the provider's CA certificate (PEM).
+  // Hosted MySQL (Aiven) requires TLS; verify against the provider's public CA certificate.
   ssl: process.env.DB_SSL === 'true'
-    ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined }
+    ? { rejectUnauthorized: true, ca: fs.readFileSync(path.join(__dirname, 'database', 'aiven-ca.pem'), 'utf8') }
     : undefined,
 });
 
